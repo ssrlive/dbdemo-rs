@@ -55,22 +55,22 @@ async fn get_products(auth: BasicAuth) -> Value {
 }
 
 #[get("/<id>")]
-async fn get_product(id: i32) -> Value {
+async fn get_product(id: i32, auth: BasicAuth) -> Value {
     json!("Product::find(id)")
 }
 
 #[post("/")]
-async fn create_product() -> Value {
+async fn create_product(auth: BasicAuth) -> Value {
     json!("Product::create()")
 }
 
 #[put("/<id>")]
-async fn update_product(id: i32) -> Value {
+async fn update_product(id: i32, auth: BasicAuth) -> Value {
     json!("Product::update(id)")
 }
 
 #[delete("/<id>")]
-async fn delete_product(id: i32) -> Value {
+async fn delete_product(id: i32, auth: BasicAuth) -> Value {
     json!("Product::delete(id)")
 }
 
