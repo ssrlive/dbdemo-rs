@@ -1,5 +1,5 @@
 use crate::schema::products;
-use diesel::{Queryable, Insertable};
+use diesel::{Insertable, Queryable};
 use rocket::serde::{Deserialize, Serialize};
 
 #[derive(Debug, Queryable, Serialize, Deserialize, AsChangeset)]

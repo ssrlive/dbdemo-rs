@@ -1,20 +1,24 @@
-#[macro_use] extern crate diesel;
+#[macro_use]
+extern crate diesel;
 
 use base64::{engine::general_purpose, Engine as _};
-use diesel::{RunQueryDsl, query_dsl::methods::{FindDsl, LimitDsl}};
+use diesel::{
+    query_dsl::methods::{FindDsl, LimitDsl},
+    RunQueryDsl,
+};
 use rocket::{
     catch, catchers, delete, get,
     http::Status,
     post, put, request, routes,
-    serde::json::{serde_json::json, Value},
+    serde::json::{serde_json::json, Json, Value},
 };
 use rocket_sync_db_pools::database;
 
 mod models;
 mod schema;
 
+use models::{NewProduct, Product};
 use schema::products;
-use models::{Product, NewProduct};
 
 #[database("sqlite_database")]
 struct DbConn(diesel::SqliteConnection);
@@ -66,9 +70,13 @@ fn index() -> &'static str {
 async fn get_products(auth: BasicAuth, conn: DbConn) -> Value {
     let _ = auth;
     conn.run(|c| {
-        let products = products::table.limit(100).load::<Product>(c).expect("Error loading products");
+        let products = products::table
+            .limit(100)
+            .load::<Product>(c)
+            .expect("Error loading products");
         json!(products)
-    }).await
+    })
+    .await
 }
 
 #[get("/<id>")]
