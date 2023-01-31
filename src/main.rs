@@ -106,9 +106,17 @@ async fn create_product(auth: BasicAuth, conn: DbConn, new_product: Json<NewProd
     .await
 }
 
-#[put("/<id>")]
-async fn update_product(id: i32, auth: BasicAuth) -> Value {
-    json!("Product::update(id)")
+#[put("/<id>", format = "json", data = "<product>")]
+async fn update_product(id: i32, product: Json<Product>, auth: BasicAuth, conn: DbConn) -> Value {
+    let _ = auth;
+    conn.run(move |c| {
+        let count = diesel::update(products::table.find(id))
+            .set(product.into_inner())
+            .execute(c)
+            .expect("Error update product");
+        json!(count)
+    })
+    .await
 }
 
 #[delete("/<id>")]
