@@ -4,7 +4,7 @@ extern crate diesel;
 use base64::{engine::general_purpose, Engine as _};
 use diesel::{
     query_dsl::methods::{FindDsl, LimitDsl},
-    RunQueryDsl,
+    ExpressionMethods, RunQueryDsl,
 };
 use rocket::{
     catch, catchers, delete, get,
@@ -111,7 +111,10 @@ async fn update_product(id: i32, product: Json<Product>, auth: BasicAuth, conn: 
     let _ = auth;
     conn.run(move |c| {
         let count = diesel::update(products::table.find(id))
-            .set(product.into_inner())
+            .set((
+                products::name.eq(&product.name),
+                products::description.eq(&product.description),
+            ))
             .execute(c)
             .expect("Error update product");
         json!(count)
