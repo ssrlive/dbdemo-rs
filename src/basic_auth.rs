@@ -1,4 +1,5 @@
 use base64::{engine::general_purpose, Engine as _};
+use rocket::{http::Status, request};
 
 // Basic authentication, for example:
 // Basic base64(username:password)
@@ -21,5 +22,19 @@ impl BasicAuth {
         let username = split.next()?.to_string();
         let password = split.next()?.to_string();
         Some(Self::new(username, password))
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> request::FromRequest<'r> for BasicAuth {
+    type Error = ();
+
+    async fn from_request(request: &'r rocket::Request<'_>) -> request::Outcome<Self, Self::Error> {
+        if let Some(header) = request.headers().get_one("Authorization") {
+            if let Some(auth) = Self::from_header(header) {
+                return request::Outcome::Success(auth);
+            }
+        }
+        request::Outcome::Failure((Status::Unauthorized, ()))
     }
 }

@@ -6,9 +6,7 @@ use diesel::{
     ExpressionMethods, RunQueryDsl,
 };
 use rocket::{
-    catch, catchers, delete, get,
-    http::Status,
-    post, put, request, routes,
+    catch, catchers, delete, get, post, put, routes,
     serde::json::{serde_json::json, Json, Value},
 };
 use rocket_sync_db_pools::database;
@@ -23,20 +21,6 @@ use schema::products;
 
 #[database("sqlite_database")]
 struct DbConn(diesel::SqliteConnection);
-
-#[rocket::async_trait]
-impl<'r> request::FromRequest<'r> for BasicAuth {
-    type Error = ();
-
-    async fn from_request(request: &'r rocket::Request<'_>) -> request::Outcome<Self, Self::Error> {
-        if let Some(header) = request.headers().get_one("Authorization") {
-            if let Some(auth) = Self::from_header(header) {
-                return request::Outcome::Success(auth);
-            }
-        }
-        request::Outcome::Failure((Status::Unauthorized, ()))
-    }
-}
 
 #[get("/")]
 fn index() -> &'static str {
