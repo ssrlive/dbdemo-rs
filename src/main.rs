@@ -84,9 +84,17 @@ async fn get_product(id: i32, auth: BasicAuth) -> Value {
     json!("Product::find(id)")
 }
 
-#[post("/")]
-async fn create_product(auth: BasicAuth) -> Value {
-    json!("Product::create()")
+#[post("/", format = "json", data = "<new_product>")]
+async fn create_product(auth: BasicAuth, conn: DbConn, new_product: Json<NewProduct>) -> Value {
+    let _ = auth;
+    conn.run(move |c| {
+        let count = diesel::insert_into(products::table)
+            .values(new_product.into_inner())
+            .execute(c)
+            .expect("Error create new product");
+        json!(count)
+    })
+    .await
 }
 
 #[put("/<id>")]
