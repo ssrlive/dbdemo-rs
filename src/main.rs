@@ -1,17 +1,27 @@
+#[macro_use] extern crate diesel;
+
 use base64::{engine::general_purpose, Engine as _};
+use diesel::{RunQueryDsl, query_dsl::methods::{FindDsl, LimitDsl}};
 use rocket::{
     catch, catchers, delete, get,
     http::Status,
-    log, post, put, request, routes,
+    post, put, request, routes,
     serde::json::{serde_json::json, Value},
 };
 use rocket_sync_db_pools::database;
+
+mod models;
+mod schema;
+
+use schema::products;
+use models::{Product, NewProduct};
 
 #[database("sqlite_database")]
 struct DbConn(diesel::SqliteConnection);
 
 // Basic authentication, for example:
 // Basic base64(username:password)
+#[derive(Debug, Clone)]
 pub struct BasicAuth {
     pub username: String,
     pub password: String,
@@ -53,9 +63,12 @@ fn index() -> &'static str {
 }
 
 #[get("/")]
-async fn get_products(auth: BasicAuth) -> Value {
-    println!("{}:{}", auth.username, auth.password);
-    json!("Product::all()")
+async fn get_products(auth: BasicAuth, conn: DbConn) -> Value {
+    let _ = auth;
+    conn.run(|c| {
+        let products = products::table.limit(100).load::<Product>(c).expect("Error loading products");
+        json!(products)
+    }).await
 }
 
 #[get("/<id>")]
