@@ -14,7 +14,7 @@ pub struct Product {
 
 #[derive(Debug, Insertable, Deserialize)]
 #[serde(crate = "rocket::serde")]
-#[table_name = "products"]
+#[diesel(table_name = products)]
 pub struct NewProduct {
     pub name: String,
     pub description: String,
