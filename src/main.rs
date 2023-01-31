@@ -1,10 +1,6 @@
 #[macro_use]
 extern crate diesel;
 
-use diesel::{
-    query_dsl::methods::{FindDsl, LimitDsl},
-    ExpressionMethods, RunQueryDsl,
-};
 use rocket::{
     catch, catchers, delete, get, post, put, routes,
     serde::json::{serde_json::json, Json, Value},
@@ -13,11 +9,12 @@ use rocket_sync_db_pools::database;
 
 mod basic_auth;
 mod models;
+mod repositories;
 mod schema;
 
 use basic_auth::BasicAuth;
 use models::{NewProduct, Product};
-use schema::products;
+use repositories::ProductRepository;
 
 #[database("sqlite_database")]
 struct DbConn(diesel::SqliteConnection);
@@ -31,10 +28,7 @@ fn index() -> &'static str {
 async fn get_products(auth: BasicAuth, conn: DbConn) -> Value {
     let _ = auth;
     conn.run(|c| {
-        let products = products::table
-            .limit(100)
-            .load::<Product>(c)
-            .expect("Error loading products");
+        let products = ProductRepository::get_products(c).expect("Error loading products");
         json!(products)
     })
     .await
@@ -44,11 +38,7 @@ async fn get_products(auth: BasicAuth, conn: DbConn) -> Value {
 async fn get_product(id: i32, auth: BasicAuth, conn: DbConn) -> Value {
     let _ = auth;
     conn.run(move |c| {
-        // let product = products::table.find(id).get_result::<Product>(c).expect("error");
-        let product = products::table
-            .find(id)
-            .first::<Product>(c)
-            .expect("Error loading product");
+        let product = ProductRepository::get_product(id, c).expect("Error loading product");
         json!(product)
     })
     .await
@@ -58,11 +48,9 @@ async fn get_product(id: i32, auth: BasicAuth, conn: DbConn) -> Value {
 async fn create_product(auth: BasicAuth, conn: DbConn, new_product: Json<NewProduct>) -> Value {
     let _ = auth;
     conn.run(move |c| {
-        let count = diesel::insert_into(products::table)
-            .values(new_product.into_inner())
-            .execute(c)
-            .expect("Error create new product");
-        json!(count)
+        let product = ProductRepository::create_product(new_product.into_inner(), c)
+            .expect("Error create product");
+        json!(product)
     })
     .await
 }
@@ -71,14 +59,10 @@ async fn create_product(auth: BasicAuth, conn: DbConn, new_product: Json<NewProd
 async fn update_product(id: i32, product: Json<Product>, auth: BasicAuth, conn: DbConn) -> Value {
     let _ = auth;
     conn.run(move |c| {
-        let count = diesel::update(products::table.find(id))
-            .set((
-                products::name.eq(&product.name),
-                products::description.eq(&product.description),
-            ))
-            .execute(c)
-            .expect("Error update product");
-        json!(count)
+        let mut product = product.into_inner();
+        product.id = id;
+        let product = ProductRepository::update_product(product, c).expect("Error update product");
+        json!(product)
     })
     .await
 }
@@ -87,9 +71,7 @@ async fn update_product(id: i32, product: Json<Product>, auth: BasicAuth, conn: 
 async fn delete_product(id: i32, auth: BasicAuth, conn: DbConn) -> Value {
     let _ = auth;
     conn.run(move |c| {
-        let count = diesel::delete(products::table.find(id))
-            .execute(c)
-            .expect("Error delete product");
+        let count = ProductRepository::delete_product(id, c).expect("Error delete product");
         json!(count)
     })
     .await
