@@ -2,7 +2,11 @@
 extern crate diesel;
 
 use rocket::{
-    catch, catchers, delete, get, post, put, routes,
+    catch, catchers, delete, get,
+    http::Status,
+    post, put,
+    response::status,
+    routes,
     serde::json::{serde_json::json, Json, Value},
 };
 use rocket_sync_db_pools::database;
@@ -16,6 +20,8 @@ use basic_auth::BasicAuth;
 use models::{NewProduct, Product};
 use repositories::ProductRepository;
 
+type ResultValue = Result<Value, status::Custom<Value>>;
+
 #[database("sqlite_database")]
 struct DbConn(diesel::SqliteConnection);
 
@@ -25,56 +31,73 @@ fn index() -> &'static str {
 }
 
 #[get("/")]
-async fn get_products(auth: BasicAuth, conn: DbConn) -> Value {
+async fn get_products(auth: BasicAuth, conn: DbConn) -> ResultValue {
     let _ = auth;
     conn.run(|c| {
-        let products = ProductRepository::get_products(c).expect("Error loading products");
-        json!(products)
+        ProductRepository::get_products(c)
+            .map(|p| json!(p))
+            .map_err(error_handler)
     })
     .await
 }
 
 #[get("/<id>")]
-async fn get_product(id: i32, auth: BasicAuth, conn: DbConn) -> Value {
+async fn get_product(id: i32, auth: BasicAuth, conn: DbConn) -> ResultValue {
     let _ = auth;
     conn.run(move |c| {
-        let product = ProductRepository::get_product(id, c).expect("Error loading product");
-        json!(product)
+        ProductRepository::get_product(id, c)
+            .map(|p| json!(p))
+            .map_err(error_handler)
     })
     .await
 }
 
 #[post("/", format = "json", data = "<new_product>")]
-async fn create_product(auth: BasicAuth, conn: DbConn, new_product: Json<NewProduct>) -> Value {
+async fn create_product(
+    auth: BasicAuth,
+    conn: DbConn,
+    new_product: Json<NewProduct>,
+) -> ResultValue {
     let _ = auth;
     conn.run(move |c| {
-        let product = ProductRepository::create_product(new_product.into_inner(), c)
-            .expect("Error create product");
-        json!(product)
+        ProductRepository::create_product(new_product.into_inner(), c)
+            .map(|p| json!(p))
+            .map_err(error_handler)
     })
     .await
 }
 
 #[put("/<id>", format = "json", data = "<product>")]
-async fn update_product(id: i32, product: Json<Product>, auth: BasicAuth, conn: DbConn) -> Value {
+async fn update_product(
+    id: i32,
+    product: Json<Product>,
+    auth: BasicAuth,
+    conn: DbConn,
+) -> ResultValue {
     let _ = auth;
     conn.run(move |c| {
         let mut product = product.into_inner();
         product.id = id;
-        let product = ProductRepository::update_product(product, c).expect("Error update product");
-        json!(product)
+        ProductRepository::update_product(product, c)
+            .map(|p| json!(p))
+            .map_err(error_handler)
     })
     .await
 }
 
 #[delete("/<id>")]
-async fn delete_product(id: i32, auth: BasicAuth, conn: DbConn) -> Value {
+async fn delete_product(id: i32, auth: BasicAuth, conn: DbConn) -> ResultValue {
     let _ = auth;
     conn.run(move |c| {
-        let count = ProductRepository::delete_product(id, c).expect("Error delete product");
-        json!(count)
+        ProductRepository::delete_product(id, c)
+            .map(|p| json!(p))
+            .map_err(error_handler)
     })
     .await
+}
+
+fn error_handler(e: diesel::result::Error) -> status::Custom<Value> {
+    status::Custom(Status::InternalServerError, json!(e.to_string()))
 }
 
 #[catch(404)]
