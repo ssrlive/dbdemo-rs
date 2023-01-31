@@ -80,8 +80,17 @@ async fn get_products(auth: BasicAuth, conn: DbConn) -> Value {
 }
 
 #[get("/<id>")]
-async fn get_product(id: i32, auth: BasicAuth) -> Value {
-    json!("Product::find(id)")
+async fn get_product(id: i32, auth: BasicAuth, conn: DbConn) -> Value {
+    let _ = auth;
+    conn.run(move |c| {
+        // let product = products::table.find(id).get_result::<Product>(c).expect("error");
+        let product = products::table
+            .find(id)
+            .first::<Product>(c)
+            .expect("Error loading product");
+        json!(product)
+    })
+    .await
 }
 
 #[post("/", format = "json", data = "<new_product>")]
