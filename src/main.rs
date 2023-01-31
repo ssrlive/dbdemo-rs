@@ -120,8 +120,15 @@ async fn update_product(id: i32, product: Json<Product>, auth: BasicAuth, conn: 
 }
 
 #[delete("/<id>")]
-async fn delete_product(id: i32, auth: BasicAuth) -> Value {
-    json!("Product::delete(id)")
+async fn delete_product(id: i32, auth: BasicAuth, conn: DbConn) -> Value {
+    let _ = auth;
+    conn.run(move |c| {
+        let count = diesel::delete(products::table.find(id))
+            .execute(c)
+            .expect("Error delete product");
+        json!(count)
+    })
+    .await
 }
 
 #[catch(404)]
