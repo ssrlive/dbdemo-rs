@@ -5,6 +5,10 @@ use rocket::{
     log, post, put, request, routes,
     serde::json::{serde_json::json, Value},
 };
+use rocket_sync_db_pools::database;
+
+#[database("sqlite_database")]
+struct DbConn(diesel::SqliteConnection);
 
 // Basic authentication, for example:
 // Basic base64(username:password)
@@ -94,6 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
         )
         .register("/", catchers![not_found_url])
+        .attach(DbConn::fairing())
         .launch()
         .await?;
     Ok(())

@@ -2,5 +2,6 @@
 .VSCodeCounter/
 build/
 tmp/
+*.sqlite3
 Cargo.lock
 /target
